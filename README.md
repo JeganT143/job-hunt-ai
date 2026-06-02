@@ -1,6 +1,6 @@
 # Job Hunt AI
 
-A personal job-search command centre built with Next.js 14, Prisma, SQLite, and an AI career coach powered by OpenRouter.
+A personal job search command centre built with Next.js 14, Prisma, SQLite, and an AI career coach powered by OpenRouter.
 
 Track applications, manage prep topics, schedule todos, and get context-aware coaching — all in one place.
 
@@ -20,7 +20,6 @@ Track applications, manage prep topics, schedule todos, and get context-aware co
 ---
 
 ## Local Setup
-
 ### Prerequisites
 
 - Node.js 20+
