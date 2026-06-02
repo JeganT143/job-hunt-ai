@@ -14,14 +14,21 @@ export async function GET() {
 
   let dbTest: string;
   let tables: string[] = [];
+  let todoCount: number | string = "not tested";
   try {
     const result = await prisma.$queryRawUnsafe<{ name: string }[]>(
       "SELECT name FROM sqlite_master WHERE type='table'"
     );
     tables = result.map((r) => r.name);
-    dbTest = "ok";
+    dbTest = "raw ok";
   } catch (err: unknown) {
     dbTest = err instanceof Error ? err.message : String(err);
+  }
+
+  try {
+    todoCount = await prisma.todo.count();
+  } catch (err: unknown) {
+    todoCount = "FAIL: " + (err instanceof Error ? err.message : String(err));
   }
 
   return NextResponse.json({
@@ -30,7 +37,8 @@ export async function GET() {
     DATABASE_AUTH_TOKEN: token ? `set (${token.length} chars)` : "(not set)",
     NODE_ENV: process.env.NODE_ENV,
     cwd: process.cwd(),
-    db_test: dbTest,
+    raw_query: dbTest,
     tables,
+    model_todo_count: todoCount,
   });
 }
