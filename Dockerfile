@@ -1,36 +1,36 @@
 FROM node:20-alpine AS base
 
-# Install dependencies only when needed
 FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
-# Build the application
+# Build (no DB needed — all routes are force-dynamic)
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npx prisma generate
-RUN npm run build
+RUN npx prisma generate && npm run build
 
-# Production image
+# Minimal production image
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs && \
+    mkdir -p /app/prisma && chown nextjs:nodejs /app/prisma
 
-# Create the directory for the SQLite volume
-RUN mkdir -p /app/prisma && chown nextjs:nodejs /app/prisma
-
-COPY --from=builder /app/public ./public 2>/dev/null || true
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/app/generated ./app/generated
-COPY --from=builder /app/prisma/schema.prisma ./prisma/schema.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/prisma/schema.prisma ./prisma/schema.prisma
+
+# Prisma CLI needed to run `prisma db push` on first startup
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
 USER nextjs
 
@@ -38,6 +38,7 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# DATABASE_URL must be set at runtime, e.g.:
+# Initialise the DB on the mounted volume, then start the server
+# Override DATABASE_URL at runtime, e.g.:
 #   docker run -e DATABASE_URL=file:/app/prisma/prod.db -v $(pwd)/data:/app/prisma ...
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "node_modules/.bin/prisma db push && node server.js"]
