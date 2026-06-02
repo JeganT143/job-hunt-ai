@@ -39,17 +39,20 @@ async function getSidebarStats() {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  const [activeApps, todosDueToday] = await Promise.all([
-    prisma.application.count({ where: { status: { in: ACTIVE_STATUSES } } }),
-    prisma.todo.count({
-      where: {
-        done: false,
-        dueDate: { gte: today, lt: tomorrow },
-      },
-    }),
-  ]);
-
-  return { activeApps, todosDueToday };
+  try {
+    const [activeApps, todosDueToday] = await Promise.all([
+      prisma.application.count({ where: { status: { in: ACTIVE_STATUSES } } }),
+      prisma.todo.count({
+        where: {
+          done: false,
+          dueDate: { gte: today, lt: tomorrow },
+        },
+      }),
+    ]);
+    return { activeApps, todosDueToday };
+  } catch {
+    return { activeApps: 0, todosDueToday: 0 };
+  }
 }
 
 export default async function RootLayout({
