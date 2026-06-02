@@ -39,52 +39,36 @@ export default async function DashboardPage() {
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
   sevenDaysAgo.setHours(0, 0, 0, 0);
 
-  console.log("[dashboard] starting DB queries");
-  let totalApps: number,
-    activeInterviews: number,
-    prepTopics: { status: string }[],
-    openTodos: number,
-    allApps: { status: string }[],
-    recentApps: { id: string; company: string; role: string; status: string; createdAt: Date }[],
-    recentTodos: { id: string; title: string; done: boolean; priority: string; dueDate: Date | null; createdAt: Date }[],
-    weeklyApps: { createdAt: Date }[];
-
-  try {
-    [
-      totalApps,
-      activeInterviews,
-      prepTopics,
-      openTodos,
-      allApps,
-      recentApps,
-      recentTodos,
-      weeklyApps,
-    ] = await Promise.all([
-      prisma.application.count(),
-      prisma.interview.count({ where: { outcome: "Pending" } }),
-      prisma.prepTopic.findMany({ select: { status: true } }),
-      prisma.todo.count({ where: { done: false } }),
-      prisma.application.findMany({ select: { status: true } }),
-      prisma.application.findMany({
-        take: 5,
-        orderBy: { createdAt: "desc" },
-        select: { id: true, company: true, role: true, status: true, createdAt: true },
-      }),
-      prisma.todo.findMany({
-        take: 5,
-        orderBy: { createdAt: "desc" },
-        select: { id: true, title: true, done: true, priority: true, dueDate: true, createdAt: true },
-      }),
-      prisma.application.findMany({
-        where: { createdAt: { gte: sevenDaysAgo } },
-        select: { createdAt: true },
-      }),
-    ]);
-    console.log("[dashboard] DB queries ok, totalApps:", totalApps);
-  } catch (err) {
-    console.error("[dashboard] DB query FAILED:", err);
-    throw err;
-  }
+  const [
+    totalApps,
+    activeInterviews,
+    prepTopics,
+    openTodos,
+    allApps,
+    recentApps,
+    recentTodos,
+    weeklyApps,
+  ] = await Promise.all([
+    prisma.application.count(),
+    prisma.interview.count({ where: { outcome: "Pending" } }),
+    prisma.prepTopic.findMany({ select: { status: true } }),
+    prisma.todo.count({ where: { done: false } }),
+    prisma.application.findMany({ select: { status: true } }),
+    prisma.application.findMany({
+      take: 5,
+      orderBy: { createdAt: "desc" },
+      select: { id: true, company: true, role: true, status: true, createdAt: true },
+    }),
+    prisma.todo.findMany({
+      take: 5,
+      orderBy: { createdAt: "desc" },
+      select: { id: true, title: true, done: true, priority: true, dueDate: true, createdAt: true },
+    }),
+    prisma.application.findMany({
+      where: { createdAt: { gte: sevenDaysAgo } },
+      select: { createdAt: true },
+    }),
+  ]);
 
   const prepDone = prepTopics.filter((t) => t.status === "Done").length;
   const prepTotal = prepTopics.length;
