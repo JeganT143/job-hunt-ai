@@ -2,26 +2,113 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Design System ─────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Backgrounds */
+  --bg:           #f4f4f9;
+  --bg-surface:   #ffffff;
+  --bg-elevated:  #ebebf5;
+  --bg-sidebar:   #eaeaf4;
+
+  /* Borders */
+  --border:       rgba(13, 13, 40, 0.07);
+  --border-strong: rgba(13, 13, 40, 0.13);
+
+  /* Accent — electric teal */
+  --accent:       #0891b2;
+  --accent-fg:    #ffffff;
+  --accent-dim:   rgba(8, 145, 178, 0.09);
+  --accent-border: rgba(8, 145, 178, 0.25);
+
+  /* Text */
+  --text-primary:   #0d0d1c;
+  --text-secondary: #4a4a72;
+  --text-muted:     #8a8aaa;
+
+  /* Aliases for Tailwind compat */
+  --background: var(--bg);
+  --foreground: var(--text-primary);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.dark {
+  --bg:           #09090f;
+  --bg-surface:   #0f0f1c;
+  --bg-elevated:  #141428;
+  --bg-sidebar:   #060612;
+
+  --border:       rgba(255, 255, 255, 0.055);
+  --border-strong: rgba(255, 255, 255, 0.11);
+
+  --accent:       #22d3ee;
+  --accent-fg:    #030712;
+  --accent-dim:   rgba(34, 211, 238, 0.08);
+  --accent-border: rgba(34, 211, 238, 0.22);
+
+  --text-primary:   #e2e2ef;
+  --text-secondary: #6e6e98;
+  --text-muted:     #42425a;
+
+  --background: var(--bg);
+  --foreground: var(--text-primary);
 }
 
+/* ── Base ──────────────────────────────────────────────── */
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text-primary);
+  background: var(--bg);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* ── Scrollbar ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 2px;
+}
+
+/* ── Keyframes ─────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Utilities ─────────────────────────────────────────── */
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  .text-balance { text-wrap: balance; }
+
+  /* Glass card — the primary surface */
+  .card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
   }
+
+  /* Display typeface */
+  .font-display {
+    font-family: var(--font-instrument-serif), Georgia, serif;
+  }
+
+  /* Accent shorthands */
+  .text-accent  { color: var(--accent); }
+  .bg-accent    { background: var(--accent); color: var(--accent-fg); }
+  .bg-accent-dim { background: var(--accent-dim); }
+  .border-accent { border-color: var(--accent); }
+
+  /* Fade animations */
+  .animate-fade-up  { animation: fadeUp  0.45s ease both; }
+  .animate-fade-in  { animation: fadeIn  0.35s ease both; }
+
+  /* Stagger helpers */
+  .delay-75  { animation-delay: 75ms; }
+  .delay-150 { animation-delay: 150ms; }
+  .delay-225 { animation-delay: 225ms; }
+  .delay-300 { animation-delay: 300ms; }
 }

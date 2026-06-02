@@ -1,101 +1,150 @@
-import Image from "next/image";
+export const dynamic = "force-dynamic";
 
-export default function Home() {
+import { prisma } from "@/lib/prisma";
+import { MetricCards } from "./components/dashboard/MetricCards";
+import { StatusChart } from "./components/dashboard/StatusChart";
+import { WeeklyChart } from "./components/dashboard/WeeklyChart";
+import { RecentActivity } from "./components/dashboard/RecentActivity";
+import { QuickAdd } from "./components/dashboard/QuickAdd";
+
+function buildWeeklyData(apps: { createdAt: Date }[]) {
+  const now = new Date();
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = new Date(now);
+    day.setDate(day.getDate() - (6 - i));
+    day.setHours(0, 0, 0, 0);
+    const next = new Date(day);
+    next.setDate(next.getDate() + 1);
+    const count = apps.filter((a) => {
+      const d = new Date(a.createdAt);
+      return d >= day && d < next;
+    }).length;
+    return {
+      day: day.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
+      shortDay: day.toLocaleDateString("en-US", { weekday: "short" }),
+      count,
+    };
+  });
+}
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+export default async function DashboardPage() {
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+  sevenDaysAgo.setHours(0, 0, 0, 0);
+
+  const [
+    totalApps,
+    activeInterviews,
+    prepTopics,
+    openTodos,
+    allApps,
+    recentApps,
+    recentTodos,
+    weeklyApps,
+  ] = await Promise.all([
+    prisma.application.count(),
+    prisma.interview.count({ where: { outcome: "Pending" } }),
+    prisma.prepTopic.findMany({ select: { status: true } }),
+    prisma.todo.count({ where: { done: false } }),
+    prisma.application.findMany({ select: { status: true } }),
+    prisma.application.findMany({
+      take: 5,
+      orderBy: { createdAt: "desc" },
+      select: { id: true, company: true, role: true, status: true, createdAt: true },
+    }),
+    prisma.todo.findMany({
+      take: 5,
+      orderBy: { createdAt: "desc" },
+      select: { id: true, title: true, done: true, priority: true, dueDate: true, createdAt: true },
+    }),
+    prisma.application.findMany({
+      where: { createdAt: { gte: sevenDaysAgo } },
+      select: { createdAt: true },
+    }),
+  ]);
+
+  const prepDone = prepTopics.filter((t) => t.status === "Done").length;
+  const prepTotal = prepTopics.length;
+  const prepPercent = prepTotal > 0 ? Math.round((prepDone / prepTotal) * 100) : 0;
+
+  const statusMap: Record<string, number> = {};
+  for (const app of allApps) {
+    statusMap[app.status] = (statusMap[app.status] ?? 0) + 1;
+  }
+  const statusData = Object.entries(statusMap).map(([status, count]) => ({ status, count }));
+  const weeklyData = buildWeeklyData(weeklyApps);
+
+  const serializedApps = recentApps.map((a) => ({
+    ...a,
+    createdAt: a.createdAt.toISOString(),
+  }));
+  const serializedTodos = recentTodos.map((t) => ({
+    ...t,
+    dueDate: t.dueDate ? t.dueDate.toISOString() : null,
+    createdAt: t.createdAt.toISOString(),
+  }));
+
+  const dateLabel = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div className="min-h-full">
+      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+        {/* ── Page heading ───────────────────────────── */}
+        <div className="animate-fade-up">
+          <p className="text-xs font-semibold uppercase tracking-widest text-[var(--text-muted)] mb-1">
+            {dateLabel}
+          </p>
+          <h1 className="font-display text-4xl text-[var(--text-primary)] leading-tight tracking-tight">
+            {getGreeting()}.
+          </h1>
+          <p className="text-sm text-[var(--text-secondary)] mt-1.5">
+            Here&apos;s where your job search stands today.
+          </p>
+        </div>
+
+        {/* ── Metric cards ───────────────────────────── */}
+        <MetricCards
+          totalApps={totalApps}
+          activeInterviews={activeInterviews}
+          prepPercent={prepPercent}
+          prepDone={prepDone}
+          prepTotal={prepTotal}
+          openTodos={openTodos}
+        />
+
+        {/* ── Charts row ─────────────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 animate-fade-up delay-150">
+          <div className="lg:col-span-2">
+            <StatusChart data={statusData} total={totalApps} />
+          </div>
+          <div className="lg:col-span-3">
+            <WeeklyChart data={weeklyData} />
+          </div>
+        </div>
+
+        {/* ── Bottom row ─────────────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-8 animate-fade-up delay-300">
+          <div className="lg:col-span-2">
+            <RecentActivity recentApps={serializedApps} recentTodos={serializedTodos} />
+          </div>
+          <div className="lg:col-span-1">
+            <QuickAdd />
+          </div>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
