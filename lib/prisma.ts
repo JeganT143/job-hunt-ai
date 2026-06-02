@@ -3,9 +3,14 @@ import { PrismaLibSql } from "@prisma/adapter-libsql";
 import path from "path";
 
 function createPrismaClient() {
-  const dbUrl =
+  let dbUrl =
     process.env.DATABASE_URL ??
     `file:${path.resolve(process.cwd(), "dev.db")}`;
+  // libsql:// uses WebSockets which are unreliable in serverless (Vercel/Lambda).
+  // https:// is the stable alternative and is functionally identical for Turso.
+  if (dbUrl.startsWith("libsql://")) {
+    dbUrl = dbUrl.replace("libsql://", "https://");
+  }
   const authToken = process.env.DATABASE_AUTH_TOKEN;
   const adapter = new PrismaLibSql({ url: dbUrl, authToken });
   return new PrismaClient({ adapter });
